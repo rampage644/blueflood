@@ -62,20 +62,8 @@ public class EventElasticSearchIO implements GenericElasticSearchIO {
         BoolQueryBuilder qb = boolQuery()
                 .must(termQuery(ESFieldLabel.tenantid.toString(), tenant));
 
-        try {
-            String tagsQuery = query.get(ESFieldLabel.tags.toString()).get(0);
-            qb = qb.must(termQuery(ESFieldLabel.tags.toString(), tagsQuery));
-        }
-        catch (Exception e) {}
-
-        String untilQuery = extractFieldFromQuery(untilQueryName, query);
-        String fromQuery = extractFieldFromQuery(fromQueryName, query);
-        if (!untilQuery.equals("") && !fromQuery.equals("")) {
-            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).to(untilQuery).from(fromQuery));
-        } else if (!untilQuery.equals("")) {
-            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).to(untilQuery));
-        } else if (!fromQuery.equals("")) {
-            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).from(fromQuery));
+        if (query != null) {
+            qb = extractQueryParameters(query, qb);
         }
 
         SearchResponse response = client.prepareSearch(EVENT_INDEX)
@@ -92,6 +80,25 @@ public class EventElasticSearchIO implements GenericElasticSearchIO {
         }
 
         return events;
+    }
+
+    private BoolQueryBuilder extractQueryParameters(Map<String, List<String>> query, BoolQueryBuilder qb) {
+        try {
+            String tagsQuery = query.get(ESFieldLabel.tags.toString()).get(0);
+            qb = qb.must(termQuery(ESFieldLabel.tags.toString(), tagsQuery));
+        }
+        catch (Exception e) {}
+
+        String untilQuery = extractFieldFromQuery(untilQueryName, query);
+        String fromQuery = extractFieldFromQuery(fromQueryName, query);
+        if (!untilQuery.equals("") && !fromQuery.equals("")) {
+            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).to(untilQuery).from(fromQuery));
+        } else if (!untilQuery.equals("")) {
+            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).to(untilQuery));
+        } else if (!fromQuery.equals("")) {
+            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).from(fromQuery));
+        }
+        return qb;
     }
 
     private String extractFieldFromQuery(String name, Map<String, List<String>> query) {
