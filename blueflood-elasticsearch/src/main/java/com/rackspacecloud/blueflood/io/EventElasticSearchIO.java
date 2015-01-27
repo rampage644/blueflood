@@ -5,6 +5,7 @@ import com.rackspacecloud.blueflood.service.RemoteElasticSearchServer;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.SearchHit;
 
 import java.util.ArrayList;
@@ -13,11 +14,12 @@ import java.util.Map;
 
 
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
+import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 public class EventElasticSearchIO implements GenericElasticSearchIO {
     public static final String EVENT_INDEX = "events";
-    private static final String ES_TYPE = "graphite_event";
+    public static final String ES_TYPE = "graphite_event";
     private final Client client;
 
 
@@ -28,6 +30,10 @@ public class EventElasticSearchIO implements GenericElasticSearchIO {
         tags,
         tenantid
     }
+
+    // TODO refactor me! Move out of here
+    private static final String untilQueryName = "until";
+    private static final String fromQueryName = "from";
 
     public EventElasticSearchIO() {
         this(RemoteElasticSearchServer.getInstance());
@@ -52,9 +58,26 @@ public class EventElasticSearchIO implements GenericElasticSearchIO {
     }
 
     @Override
-    public List<Map<String, Object>> search(String tenant, String query) throws Exception {
+    public List<Map<String, Object>> search(String tenant, Map<String, List<String>> query) throws Exception {
         BoolQueryBuilder qb = boolQuery()
                 .must(termQuery(ESFieldLabel.tenantid.toString(), tenant));
+
+        try {
+            String tagsQuery = query.get(ESFieldLabel.tags.toString()).get(0);
+            qb = qb.must(termQuery(ESFieldLabel.tags.toString(), tagsQuery));
+        }
+        catch (Exception e) {}
+
+        String untilQuery = extractFieldFromQuery(untilQueryName, query);
+        String fromQuery = extractFieldFromQuery(fromQueryName, query);
+        if (!untilQuery.equals("") && !fromQuery.equals("")) {
+            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).to(untilQuery).from(fromQuery));
+        } else if (!untilQuery.equals("")) {
+            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).to(untilQuery));
+        } else if (!fromQuery.equals("")) {
+            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).from(fromQuery));
+        }
+
         SearchResponse response = client.prepareSearch(EVENT_INDEX)
                 .setRouting(tenant)
                 .setSize(100000)
@@ -69,5 +92,16 @@ public class EventElasticSearchIO implements GenericElasticSearchIO {
         }
 
         return events;
+    }
+
+    private String extractFieldFromQuery(String name, Map<String, List<String>> query) {
+        String result = "";
+        if (query.containsKey(name)) {
+            try {
+                result = query.get(name).get(0);
+            }
+            catch (Exception e) { }
+        }
+        return result;
     }
 }
