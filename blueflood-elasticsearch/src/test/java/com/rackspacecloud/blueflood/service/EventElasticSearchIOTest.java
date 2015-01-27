@@ -35,7 +35,6 @@ public class EventElasticSearchIOTest {
         List<Map<String, Object>> results = searchIO.search(TENANT_1, query);
         Assert.assertEquals(TENANT_1_EVENTS_NUM, results.size());
 
-
         results = searchIO.search(TENANT_2, query);
         Assert.assertEquals(TENANT_2_EVENTS_NUM, results.size());
 
@@ -109,10 +108,12 @@ public class EventElasticSearchIOTest {
 
     private void createTestEvents(String tenant, int eventCount) {
         ArrayList<Map<String, Object>> eventList = new ArrayList<Map<String, Object>>();
+        DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
+        DateTime date = new DateTime();
         for (int i=0; i<eventCount; i++) {
             Map<String, Object> event = new HashMap<String, Object>();
             event.put("what", String.format("[%s] %s %d", tenant, "Event title sample", i));
-            event.put("when", String.format("[%s] %s %d", tenant, "Event when sample", i));
+            event.put("when", formatter.print(date.getMillis()));
             event.put("data", String.format("[%s] %s %d", tenant, "Event data sample", i));
             event.put("tags", String.format("[%s] %s %d", tenant, "Event tags sample", i));
             eventList.add(event);
