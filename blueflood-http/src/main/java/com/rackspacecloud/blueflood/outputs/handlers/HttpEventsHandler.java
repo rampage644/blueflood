@@ -63,9 +63,6 @@ public class HttpEventsHandler implements HttpRequestHandler {
     public void handle(ChannelHandlerContext ctx, HttpRequest request) {
         final String tenantId = request.getHeader("tenantId");
 
-        HTTPRequestWithDecodedQueryParams requestWithParams = (HTTPRequestWithDecodedQueryParams) request;
-        List<String> query = requestWithParams.getQueryParams().get("query");
-
         if (request.getMethod() == HttpMethod.GET) {
             handleGetEvent(ctx, request, tenantId);
         } else if (request.getMethod() == HttpMethod.POST) {
@@ -111,7 +108,9 @@ public class HttpEventsHandler implements HttpRequestHandler {
         ObjectMapper objectMapper = new ObjectMapper();
         String responseBody = null;
         try {
-            List<Map<String, Object>> searchResult = searchIO.search(tenantId, request.getUri().toString());
+            HTTPRequestWithDecodedQueryParams requestWithParams = (HTTPRequestWithDecodedQueryParams) request;
+
+            List<Map<String, Object>> searchResult = searchIO.search(tenantId, requestWithParams.getQueryParams());
             responseBody = objectMapper.writeValueAsString(searchResult);
         }
         catch (Exception e) {
