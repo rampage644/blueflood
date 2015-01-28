@@ -30,6 +30,9 @@ public class HttpEventsHandler implements HttpRequestHandler {
     public HttpEventsHandler() {
         loadEventModule();
     }
+    public HttpEventsHandler(GenericElasticSearchIO searchIO) {
+        this.searchIO = searchIO;
+    }
 
     private void loadEventModule() {
         List<String> modules = Configuration.getInstance().getListProperty(CoreConfig.EVENTS_MODULES);
