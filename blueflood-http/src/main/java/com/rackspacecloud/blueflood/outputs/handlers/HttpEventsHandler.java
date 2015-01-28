@@ -1,5 +1,6 @@
 package com.rackspacecloud.blueflood.outputs.handlers;
 
+import clojure.lang.Obj;
 import com.rackspacecloud.blueflood.http.HTTPRequestWithDecodedQueryParams;
 import com.rackspacecloud.blueflood.http.HttpRequestHandler;
 import com.rackspacecloud.blueflood.http.HttpResponder;
@@ -13,14 +14,14 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.*;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 public class HttpEventsHandler implements HttpRequestHandler {
@@ -77,33 +78,19 @@ public class HttpEventsHandler implements HttpRequestHandler {
 
     private void handlePutEvent(ChannelHandlerContext ctx, HttpRequest request, String tenantId) {
         ObjectMapper objectMapper = new ObjectMapper();
-        String when = null;
-        String what = null;
-        String data = null;
-        String tags = null;
         try {
-            JsonNode node = objectMapper.readTree(request.getContent().array());
-            when = node.get("when").asText();
-            what = node.get("what").asText();
-            data = node.get("data").asText();
-            tags = node.get("tags").asText();
-
-            HashMap<String, Object> userData = new HashMap<String, Object>();
-            userData.put("when", when);
-            userData.put("what", what);
-            userData.put("data", data);
-            userData.put("tags", tags);
-
-            List<Map<String, Object>> events = new ArrayList<Map<String, Object>>();
-            events.add(userData);
-            searchIO.insert(tenantId, events);
+            Event event = objectMapper.readValue(request.getContent().array(), Event.class);
+            if (event.getWhen().equals("")) {
+                DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
+                event.setWhen(formatter.print(new DateTime().getMillis()));
+            }
+            searchIO.insert(tenantId, Arrays.asList(event.toMap()));
         }
         catch (Exception e) {
             log.error(String.format("Exception %s", e.toString()));
         }
 
-        sendResponse(ctx, request, String.format("put event for tenant: %s when: %s what: %s data: %s tags: %s",
-                        tenantId, when, what, data, tags), HttpResponseStatus.OK);
+        sendResponse(ctx, request, String.format(""), HttpResponseStatus.OK);
     }
 
     private void handleGetEvent(ChannelHandlerContext ctx, HttpRequest request, String tenantId) {
@@ -130,6 +117,55 @@ public class HttpEventsHandler implements HttpRequestHandler {
             response.setContent(ChannelBuffers.copiedBuffer(messageBody, Constants.DEFAULT_CHARSET));
         }
         HttpResponder.respond(channel, request, response);
+    }
+
+    private static class Event {
+        private String when = "";
+        private String what = "";
+        private String data = "";
+        private String tags = "";
+
+
+        public Map<String, Object> toMap() {
+            Map<String, Object> map = new HashMap<String, Object>();
+            map.put("when", getWhen());
+            map.put("what", getWhat());
+            map.put("data", getData());
+            map.put("tags", getTags());
+            return map;
+        }
+
+        public String getWhen() {
+            return when;
+        }
+
+        public void setWhen(String when) {
+            this.when = when;
+        }
+
+        public String getWhat() {
+            return what;
+        }
+
+        public void setWhat(String what) {
+            this.what = what;
+        }
+
+        public String getData() {
+            return data;
+        }
+
+        public void setData(String data) {
+            this.data = data;
+        }
+
+        public String getTags() {
+            return tags;
+        }
+
+        public void setTags(String tags) {
+            this.tags = tags;
+        }
     }
 
 }
