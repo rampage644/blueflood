@@ -85,6 +85,7 @@ public class HttpEventsHandlerTest {
 
     private void testQuery(String query, Map<String, List<String>> params) {
         handler.handle(context, createGetRequest(query));
+
         try {
             verify(searchIO).search(TENANT, params);
         }
@@ -94,7 +95,14 @@ public class HttpEventsHandlerTest {
     }
 
     @Test public void testMalformedEventPut() {
-        Assert.fail("Not implemented");
+        final String malformedJSON = "{\"when\":, what]}";
+        handler.handle(context, createRequest(HttpMethod.POST, "", malformedJSON));
+        try {
+            verify(searchIO, never()).insert(anyString(), anyList());
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
     }
 
     @Test public void testQueryParametersParse() {
@@ -113,7 +121,20 @@ public class HttpEventsHandlerTest {
     }
 
     @Test public void testMinimumEventPut() {
-        Assert.fail("Not implemented");
+        Map<String, Object> event = new HashMap<String, Object>();
+        event.put("data", "data");
+
+        try {
+            handler.handle(context, createPutOneEventRequest(event));
+            verify(searchIO, never()).insert(anyString(), anyList());
+
+            event.put("what", "what");
+            handler.handle(context, createPutOneEventRequest(event));
+            verify(searchIO).insert(anyString(), anyList());
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
     }
 
     @Test public void testApplyingCurrentTimeWhenEmpty() {
@@ -121,6 +142,7 @@ public class HttpEventsHandlerTest {
             Map<String, Object> event = createRandomEvent();
             event.remove("when");
             handler.handle(context, createPutOneEventRequest(event));
+
 
             DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
             event.put("when", formatter.print(new DateTime().getMillis()));
