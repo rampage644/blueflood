@@ -9,13 +9,13 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.handler.codec.http.*;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.mockito.Mockito.*;
 
@@ -98,7 +98,18 @@ public class HttpEventsHandlerTest {
     }
 
     @Test public void testQueryParametersParse() {
-        Assert.fail("Not implemented");
+        Map<String, List<String>> params = new HashMap<String, List<String>>();
+        params.put("until", Arrays.asList("now"));
+        testQuery("?until=now", params);
+
+        params.clear();
+        params.put("until", Arrays.asList("now"));
+        params.put("from", Arrays.asList("1990-01-01T00:00:00"));
+        testQuery("?until=now&from=1990-01-01T00:00:00", params);
+
+        params.clear();
+        params.put("tags", Arrays.asList("event"));
+        testQuery("?tags=event", params);
     }
 
     @Test public void testMinimumEventPut() {
@@ -106,6 +117,17 @@ public class HttpEventsHandlerTest {
     }
 
     @Test public void testApplyingCurrentTimeWhenEmpty() {
-        Assert.fail("Not implemented");
+        try {
+            Map<String, Object> event = createRandomEvent();
+            event.remove("when");
+            handler.handle(context, createPutOneEventRequest(event));
+
+            DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
+            event.put("when", formatter.print(new DateTime().getMillis()));
+            verify(searchIO).insert(TENANT, Arrays.asList(event));
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
     }
 }
