@@ -77,6 +77,7 @@ public class HttpEventsHandler implements HttpRequestHandler {
     }
 
     private void handlePutEvent(ChannelHandlerContext ctx, HttpRequest request, String tenantId) {
+        String response = "";
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             Event event = objectMapper.readValue(request.getContent().array(), Event.class);
@@ -84,13 +85,18 @@ public class HttpEventsHandler implements HttpRequestHandler {
                 DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
                 event.setWhen(formatter.print(new DateTime().getMillis()));
             }
-            searchIO.insert(tenantId, Arrays.asList(event.toMap()));
+
+            if (!event.getWhat().equals("")) {
+                searchIO.insert(tenantId, Arrays.asList(event.toMap()));
+                throw new Exception("Event should contain at least 'when' field.");
+            }
         }
         catch (Exception e) {
             log.error(String.format("Exception %s", e.toString()));
+            response = String.format("Error: %s", e.getMessage());
         }
 
-        sendResponse(ctx, request, String.format(""), HttpResponseStatus.OK);
+        sendResponse(ctx, request, response, HttpResponseStatus.OK);
     }
 
     private void handleGetEvent(ChannelHandlerContext ctx, HttpRequest request, String tenantId) {
