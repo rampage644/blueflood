@@ -75,17 +75,17 @@ public class EventElasticSearchIOTest {
         List<Map<String, Object>> results = searchIO.search(TENANT_RANGE, query);
         Assert.assertEquals(eventCountToCapture, results.size());
 
-        DateTime unitlDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * eventCountToCapture - secondsDelta);
+        DateTime untilDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * eventCountToCapture - secondsDelta);
         query.clear();
-        query.put("until", Arrays.asList(formatter.print(unitlDateTime.getMillis())));
+        query.put("until", Arrays.asList(formatter.print(untilDateTime.getMillis())));
         results = searchIO.search(TENANT_RANGE, query);
         Assert.assertEquals(eventCountToCapture, results.size());
 
         query.clear();
         fromDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * 2 - secondsDelta);
-        unitlDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * 1 - secondsDelta);
+        untilDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * 1 - secondsDelta);
         query.put("from", Arrays.asList(formatter.print(fromDateTime.getMillis())));
-        query.put("until", Arrays.asList(formatter.print(unitlDateTime.getMillis())));
+        query.put("until", Arrays.asList(formatter.print(untilDateTime.getMillis())));
         results = searchIO.search(TENANT_RANGE, query);
         Assert.assertEquals(1, results.size());
     }
