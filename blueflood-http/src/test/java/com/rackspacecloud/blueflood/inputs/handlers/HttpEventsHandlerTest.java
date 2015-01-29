@@ -13,13 +13,16 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.*;
 
 import static org.mockito.Mockito.*;
 
 public class HttpEventsHandlerTest {
+
     private GenericElasticSearchIO searchIO;
     private HttpEventsHandler handler;
     private ChannelHandlerContext context;
@@ -98,7 +101,11 @@ public class HttpEventsHandlerTest {
         final String malformedJSON = "{\"when\":, what]}";
         handler.handle(context, createRequest(HttpMethod.POST, "", malformedJSON));
         try {
+            ArgumentCaptor<DefaultHttpResponse> argument = ArgumentCaptor.forClass(DefaultHttpResponse.class);
+
             verify(searchIO, never()).insert(anyString(), anyList());
+            verify(channel).write(argument.capture());
+            Assert.assertNotSame(argument.getValue().getContent().toString(Charset.defaultCharset()), "");
         }
         catch (Exception e) {
             Assert.fail(e.getMessage());
@@ -125,12 +132,12 @@ public class HttpEventsHandlerTest {
         event.put("data", "data");
 
         try {
+            ArgumentCaptor<DefaultHttpResponse> argument = ArgumentCaptor.forClass(DefaultHttpResponse.class);
+
             handler.handle(context, createPutOneEventRequest(event));
             verify(searchIO, never()).insert(anyString(), anyList());
-
-            event.put("what", "what");
-            handler.handle(context, createPutOneEventRequest(event));
-            verify(searchIO).insert(anyString(), anyList());
+            verify(channel).write(argument.capture());
+            Assert.assertEquals(argument.getValue().getContent().toString(Charset.defaultCharset()), "Error: Event should contain at least 'what' field.");
         }
         catch (Exception e) {
             Assert.fail(e.getMessage());

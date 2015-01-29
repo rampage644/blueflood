@@ -86,10 +86,10 @@ public class HttpEventsHandler implements HttpRequestHandler {
                 event.setWhen(formatter.print(new DateTime().getMillis()));
             }
 
-            if (!event.getWhat().equals("")) {
-                searchIO.insert(tenantId, Arrays.asList(event.toMap()));
-                throw new Exception("Event should contain at least 'when' field.");
+            if (event.getWhat().equals("")) {
+                throw new Exception("Event should contain at least 'what' field.");
             }
+            searchIO.insert(tenantId, Arrays.asList(event.toMap()));
         }
         catch (Exception e) {
             log.error(String.format("Exception %s", e.toString()));
