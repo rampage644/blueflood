@@ -19,7 +19,7 @@ public class DateTimeParser {
                     Integer.parseInt(stringToParse.substring(6)) < 32) {
                 // do nothing
             } else {
-                return new DateTime(Long.parseLong(stringToParse));
+                return new DateTime(Long.parseLong(stringToParse) * 1000);
             }
         }
         try {

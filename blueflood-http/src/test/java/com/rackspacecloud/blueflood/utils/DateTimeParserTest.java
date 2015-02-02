@@ -10,10 +10,10 @@ import org.junit.Test;
 public class DateTimeParserTest {
     @Test
     public void testFromUnixTimestamp() {
-        long unixTimestamp = 1422792604;
+        long unixTimestamp = nowDateTime().getMillis() / 1000;
 
         Assert.assertEquals(DateTimeParser.parse(Long.toString(unixTimestamp)),
-                new DateTime(unixTimestamp));
+                nowDateTime());
     }
 
     @Test
