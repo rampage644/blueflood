@@ -83,8 +83,7 @@ public class HttpEventsHandler implements HttpRequestHandler {
         try {
             Event event = objectMapper.readValue(request.getContent().array(), Event.class);
             if (event.getWhen().equals("")) {
-                DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
-                event.setWhen(formatter.print(new DateTime().getMillis()));
+                event.setWhen(Long.toString(new DateTime().getMillis() / 1000));
             }
 
             if (event.getWhat().equals("")) {

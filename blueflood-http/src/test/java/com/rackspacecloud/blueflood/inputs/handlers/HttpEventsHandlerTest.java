@@ -163,8 +163,8 @@ public class HttpEventsHandlerTest {
             handler.handle(context, createPutOneEventRequest(event));
 
 
-            DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
-            event.put("when", formatter.print(new DateTime().getMillis()));
+
+            event.put("when", convertDateTimeToTimestamp(new DateTime()));
             verify(searchIO).insert(TENANT, Arrays.asList(event));
         }
         catch (Exception e) {
