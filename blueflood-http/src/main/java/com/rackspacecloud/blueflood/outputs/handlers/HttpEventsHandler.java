@@ -9,6 +9,7 @@ import com.rackspacecloud.blueflood.io.Constants;
 
 import com.rackspacecloud.blueflood.service.Configuration;
 import com.rackspacecloud.blueflood.service.CoreConfig;
+import com.rackspacecloud.blueflood.utils.DateTimeParser;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -105,8 +106,12 @@ public class HttpEventsHandler implements HttpRequestHandler {
         String responseBody = null;
         try {
             HTTPRequestWithDecodedQueryParams requestWithParams = (HTTPRequestWithDecodedQueryParams) request;
+            Map<String, List<String>> params = requestWithParams.getQueryParams();
 
-            List<Map<String, Object>> searchResult = searchIO.search(tenantId, requestWithParams.getQueryParams());
+            parseDateFieldInQuery(params, "from");
+            parseDateFieldInQuery(params, "until");
+
+            List<Map<String, Object>> searchResult = searchIO.search(tenantId, params);
             responseBody = objectMapper.writeValueAsString(searchResult);
         }
         catch (Exception e) {
@@ -123,6 +128,18 @@ public class HttpEventsHandler implements HttpRequestHandler {
             response.setContent(ChannelBuffers.copiedBuffer(messageBody, Constants.DEFAULT_CHARSET));
         }
         HttpResponder.respond(channel, request, response);
+    }
+
+    private void parseDateFieldInQuery(Map<String, List<String>> params, String name) {
+        if (params.containsKey(name)) {
+            String fromValue = extractDateFieldFromQuery(params.get(name));
+            params.put(name, Arrays.asList(fromValue));
+        }
+    }
+
+    private String extractDateFieldFromQuery(List<String> value) {
+        DateTime dateTime = DateTimeParser.parse(value.get(0));
+        return Long.toString(dateTime.getMillis() / 1000);
     }
 
     private static class Event {
