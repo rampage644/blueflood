@@ -6,11 +6,21 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class DateTimeParser {
     public static DateTime parse(String s) {
         String stringToParse = s.replace(" ", "").replace(",", "").replace("_", "");
         if (StringUtils.isNumeric(stringToParse)) {
-            return new DateTime(Long.parseLong(stringToParse));
+            if (stringToParse.length() == 8 &&
+                    Integer.parseInt(stringToParse.substring(0, 4)) > 1900 &&
+                    Integer.parseInt(stringToParse.substring(4, 6)) < 13 &&
+                    Integer.parseInt(stringToParse.substring(6)) < 32) {
+                // do nothing
+            } else {
+                return new DateTime(Long.parseLong(stringToParse));
+            }
         }
         try {
             DateTimeFormatter formatter = DateTimeFormat.forPattern("HH:mmyyyyMMdd");
@@ -20,25 +30,62 @@ public class DateTimeParser {
 
         }
 
-        String timezone = "";
+        String offset;
         if (stringToParse.contains("+")) {
-            String[] timezoneSplit = stringToParse.split("\\+", 1);
-            stringToParse = timezoneSplit[0];
-            timezone = timezoneSplit.length > 1 ? timezoneSplit[1] : "";
+            String[] offsetSplit = stringToParse.split("\\+", 2);
+            stringToParse = offsetSplit[0];
+            offset = offsetSplit.length > 1 ? offsetSplit[1] : "";
+            DateTime dateTime = parseTime(stringToParse);
+            dateTime = parseOffset(dateTime, offset);
+            return  dateTime;
         } else if (stringToParse.contains("-")) {
-            String[] timezoneSplit = stringToParse.split("-", 1);
-            stringToParse = timezoneSplit[0];
-            timezone = timezoneSplit.length > 1 ? timezoneSplit[1] : "";
+            String[] offsetSplit = stringToParse.split("-", 2);
+            stringToParse = offsetSplit[0];
+            offset = offsetSplit.length > 1 ? "-" + offsetSplit[1] : "";
+            DateTime dateTime = parseTime(stringToParse);
+            dateTime = parseOffset(dateTime, offset);
+            return dateTime;
+        } else {
+            return parseTime(stringToParse);
+        }
+    }
+
+    private static DateTime parseOffset(DateTime baseDateTime, String offset) {
+        if (offset.equals(""))
+            return baseDateTime;
+        Pattern p = Pattern.compile("(-?\\d*)([a-z]*)");
+        Matcher m = p.matcher(offset);
+        if (!m.matches())
+            return baseDateTime;
+
+        int count = Integer.parseInt(m.group(1));
+        String unit = m.group(2);
+
+        DateTime dateTimeWithOffset;
+        if (unit.startsWith("s")) {
+            dateTimeWithOffset = baseDateTime.plusSeconds(count);
+        } else if (unit.startsWith("min")) {
+            dateTimeWithOffset = baseDateTime.plusMinutes(count);
+        } else if (unit.startsWith("h")) {
+            dateTimeWithOffset = baseDateTime.plusHours(count);
+        } else if (unit.startsWith("d")) {
+            dateTimeWithOffset = baseDateTime.plusDays(count);
+        } else if (unit.startsWith("mon")) {
+            dateTimeWithOffset = baseDateTime.plusMonths(count);
+        } else if (unit.startsWith("y")) {
+            dateTimeWithOffset = baseDateTime.plusYears(count);
+        } else {
+            dateTimeWithOffset = baseDateTime;
         }
 
-        return parseTime(stringToParse);
+        return dateTimeWithOffset;
     }
 
     private static DateTime parseTime(String stringToParse) {
-        DateTime resultDateTime = new DateTime().withTime(0, 0, 0, 0);
+        DateTime resultDateTime = new DateTime().withHourOfDay(0).withMinuteOfHour(0).withSecondOfMinute(0).withMillisOfSecond(0);
 
-        if (stringToParse.equals("now"))
-            return resultDateTime;
+        if (stringToParse.equals("") || stringToParse.equals("now"))
+            return new DateTime().withSecondOfMinute(0).withMillisOfSecond(0);
 
         if (stringToParse.contains(":")) {
             int hour = 0;
@@ -64,13 +111,13 @@ public class DateTimeParser {
 
         if (stringToParse.startsWith("noon")) {
             resultDateTime = resultDateTime.withHourOfDay(12).withMinuteOfHour(0);
-            stringToParse = stringToParse.substring(0, "noon".length());
+            stringToParse = stringToParse.substring("noon".length());
         } else if (stringToParse.startsWith("teatime")) {
             resultDateTime = resultDateTime.withHourOfDay(16).withMinuteOfHour(0);
-            stringToParse = stringToParse.substring(0, "teatime".length());
+            stringToParse = stringToParse.substring("teatime".length());
         } else if (stringToParse.startsWith("midnight")) {
             resultDateTime = resultDateTime.withHourOfDay(0).withMinuteOfHour(0);
-            stringToParse = stringToParse.substring(0, "midnight".length());
+            stringToParse = stringToParse.substring("midnight".length());
         }
 
         if (stringToParse.equals("today")) {
@@ -83,7 +130,7 @@ public class DateTimeParser {
             // do nothing
         }
 
-        String[] datePatterns = {"MM/dd/YY", "MM/dd/YYYY", "YYYYMMdd", "MMMMdd", "EEE"};
+        String[] datePatterns = {"MM/dd/YY", "MM/dd/YYYY", "YYYYMMdd", "MMMMddYYYY"};
         for (String s : datePatterns) {
             try {
                 DateTime date = parseDate(stringToParse, s);
@@ -94,6 +141,28 @@ public class DateTimeParser {
                 continue;
             }
         }
+
+        try {
+            String monthDayOptionalYearFormat = "MMMMdd";
+            DateTime date = parseDate(stringToParse, monthDayOptionalYearFormat);
+            resultDateTime = resultDateTime.withDate(resultDateTime.getYear(), date.getMonthOfYear(), date.getDayOfMonth());
+        }
+        catch (IllegalArgumentException e) {
+
+        }
+
+        try {
+            String dayOfWeekFormat = "EEE";
+            DateTime date = parseDate(stringToParse, dayOfWeekFormat);
+            while (resultDateTime.getDayOfWeek() != date.getDayOfWeek())
+                resultDateTime = resultDateTime.minusDays(1);
+        }
+        catch (IllegalArgumentException e) {
+
+        }
+
+
+
 
 
         return resultDateTime;

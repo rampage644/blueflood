@@ -35,16 +35,7 @@ public class DateTimeParserTest {
         String nowTimestamp = "now";
 
         Assert.assertEquals(DateTimeParser.parse(nowTimestamp),
-                new DateTime());
-    }
-
-    @Test
-    public void testTimezone() {
-        String timestampWithTimezone = "now + 06:00";
-        String timestampWithZeroTimeZone = "now + 00:00";
-
-        Assert.assertEquals(DateTimeParser.parse(timestampWithTimezone),
-                DateTimeParser.parse(timestampWithZeroTimeZone).plusHours(6));
+                nowDateTime());
     }
 
     @Test
@@ -97,16 +88,55 @@ public class DateTimeParserTest {
 
     @Test
     public void testDateFormats() {
+        int currentYear = referenceDateTime().getYear();
         testFormat("12/30/14", new DateTime(2014, 12, 30, 0, 0, 0, 0));
         testFormat("12/30/2014", new DateTime(2014, 12, 30, 0, 0, 0, 0));
-        testFormat("Jul 30", new DateTime(2014, 07, 30, 0, 0, 0, 0));
+        testFormat("Jul 30", new DateTime(currentYear, 07, 30, 0, 0, 0, 0));
+        testFormat("Jul 30, 2013", new DateTime(2013, 07, 30, 0, 0, 0, 0));
         testFormat("20141230", new DateTime(2014, 12, 30, 0, 0, 0, 0));
     }
 
     @Test
     public void testDayOfWeekFormat() {
+        DateTime todayDate = referenceDateTime();
         DateTime date = DateTimeParser.parse("Sun");
         Assert.assertEquals(date.getDayOfWeek(), 7);
+        Assert.assertTrue(todayDate.getYear() == date.getYear());
+        Assert.assertTrue(todayDate.getDayOfYear() - date.getDayOfYear() <= 7);
+    }
+
+    @Test
+    public void testIncrementDecrement() {
+        testFormat("now-10h", nowDateTime().minusHours(10));
+        testFormat("now+10h", nowDateTime().plusHours(10));
+    }
+
+    @Test
+    public void testDecrementUnits() {
+        testFormat("now-10s", nowDateTime().minusSeconds(10));
+        testFormat("now-15min", nowDateTime().minusMinutes(15));
+        testFormat("now-100h", nowDateTime().minusHours(100));
+        testFormat("now-2d", nowDateTime().minusDays(2));
+        testFormat("now-6mon", nowDateTime().minusMonths(6));
+        testFormat("now-5y", nowDateTime().minusYears(5));
+
+        testFormat("-6h", nowDateTime().minusHours(6));
+    }
+
+    @Test
+    public void testIncrementUnits() {
+        testFormat("now+10s", nowDateTime().plusSeconds(10));
+        testFormat("now+15min", nowDateTime().plusMinutes(15));
+        testFormat("now+100h", nowDateTime().plusHours(100));
+        testFormat("now+2d", nowDateTime().plusDays(2));
+        testFormat("now+6mon", nowDateTime().plusMonths(6));
+        testFormat("now+5y", nowDateTime().plusYears(5));
+    }
+
+    @Test
+    public void testComplexFormats() {
+        testFormat("12:24 yesterday", nowDateTime().minusDays(1).withHourOfDay(12).withMinuteOfHour(24));
+        testFormat("noon 12/30/2014", nowDateTime().withDate(2014, 12, 30).withHourOfDay(12).withMinuteOfHour(0));
     }
 
     private void testFormat(String dateString, DateTime date) {
@@ -114,6 +144,10 @@ public class DateTimeParserTest {
     }
 
     private static DateTime referenceDateTime() {
+        return new DateTime().withHourOfDay(0).withMinuteOfHour(0).withSecondOfMinute(0).withMillisOfSecond(0);
+    }
+
+    private static DateTime nowDateTime() {
         return new DateTime().withSecondOfMinute(0).withMillisOfSecond(0);
     }
 
