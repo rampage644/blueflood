@@ -3,17 +3,12 @@ package com.rackspacecloud.blueflood.service;
 import com.github.tlrx.elasticsearch.test.EsSetup;
 import com.rackspacecloud.blueflood.io.EventElasticSearchIO;
 import junit.framework.Assert;
-import org.elasticsearch.common.joda.time.format.DateTimeFormat;
-import org.elasticsearch.common.joda.time.format.DateTimeFormatter;
-import org.elasticsearch.common.joda.time.format.ISODateTimeFormat;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class EventElasticSearchIOTest {
@@ -69,23 +64,22 @@ public class EventElasticSearchIOTest {
         Map<String, List<String>> query = new HashMap<String, List<String>>();
         final int eventCountToCapture = TENANT_RANGE_EVENTS_NUM / 2;
         final int secondsDelta = 10;
-        DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
         DateTime fromDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * eventCountToCapture - secondsDelta);
-        query.put("from", Arrays.asList(formatter.print(fromDateTime.getMillis())));
+        query.put("from", Arrays.asList(Long.toString(fromDateTime.getMillis() / 1000)));
         List<Map<String, Object>> results = searchIO.search(TENANT_RANGE, query);
         Assert.assertEquals(eventCountToCapture, results.size());
 
         DateTime untilDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * eventCountToCapture - secondsDelta);
         query.clear();
-        query.put("until", Arrays.asList(formatter.print(untilDateTime.getMillis())));
+        query.put("until", Arrays.asList(Long.toString(untilDateTime.getMillis() / 1000)));
         results = searchIO.search(TENANT_RANGE, query);
         Assert.assertEquals(eventCountToCapture, results.size());
 
         query.clear();
         fromDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * 2 - secondsDelta);
         untilDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * 1 - secondsDelta);
-        query.put("from", Arrays.asList(formatter.print(fromDateTime.getMillis())));
-        query.put("until", Arrays.asList(formatter.print(untilDateTime.getMillis())));
+        query.put("from", Arrays.asList(Long.toString(fromDateTime.getMillis() / 1000)));
+        query.put("until", Arrays.asList(Long.toString(untilDateTime.getMillis() / 1000)));
         results = searchIO.search(TENANT_RANGE, query);
         Assert.assertEquals(1, results.size());
     }
@@ -108,12 +102,11 @@ public class EventElasticSearchIOTest {
 
     private void createTestEvents(String tenant, int eventCount) {
         ArrayList<Map<String, Object>> eventList = new ArrayList<Map<String, Object>>();
-        DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
         DateTime date = new DateTime();
         for (int i=0; i<eventCount; i++) {
             Map<String, Object> event = new HashMap<String, Object>();
             event.put("what", String.format("[%s] %s %d", tenant, "Event title sample", i));
-            event.put("when", formatter.print(date.getMillis()));
+            event.put("when", date.getMillis() / 1000);
             event.put("data", String.format("[%s] %s %d", tenant, "Event data sample", i));
             event.put("tags", String.format("[%s] %s %d", tenant, "Event tags sample", i));
             eventList.add(event);
@@ -126,12 +119,11 @@ public class EventElasticSearchIOTest {
 
     private void createRangeEvents(String tenant, int eventCount, int stepInSeconds) {
         ArrayList<Map<String, Object>> eventList = new ArrayList<Map<String, Object>>();
-        DateTimeFormatter formatter = ISODateTimeFormat.dateTimeNoMillis();
         DateTime date = new DateTime();
         for (int i=0;i<eventCount; i++) {
             Map<String, Object> event = new HashMap<String, Object>();
             event.put("what", "1");
-            event.put("when", formatter.print(date.getMillis()));
+            event.put("when", date.getMillis() / 1000);
             event.put("data", "2");
             event.put("tags", "event");
             eventList.add(event);
