@@ -114,17 +114,29 @@ public class HttpEventsHandlerTest {
 
     @Test public void testQueryParametersParse() {
         Map<String, List<String>> params = new HashMap<String, List<String>>();
-        params.put("until", Arrays.asList("now"));
+        params.put("until", Arrays.asList(nowTimestamp()));
         testQuery("?until=now", params);
 
         params.clear();
-        params.put("until", Arrays.asList("now"));
-        params.put("from", Arrays.asList("1990-01-01T00:00:00"));
-        testQuery("?until=now&from=1990-01-01T00:00:00", params);
+        params.put("until", Arrays.asList(nowTimestamp()));
+        params.put("from", Arrays.asList("1422828000"));
+        testQuery("?until=now&from=1422828000000", params);
 
         params.clear();
         params.put("tags", Arrays.asList("event"));
         testQuery("?tags=event", params);
+    }
+
+    @Test
+    public void testDateQueryParamProcessing() {
+        Map<String, List<String>> params = new HashMap<String, List<String>>();
+
+
+        params.clear();
+        params.put("until", Arrays.asList(nowTimestamp()));
+        params.put("from", Arrays.asList(convertDateTimeToTimestamp(new DateTime(2014, 12, 30, 0, 0, 0, 0))));
+        testQuery("?until=now&from=00:00_2014_12_30", params);
+
     }
 
     @Test public void testMinimumEventPut() {
@@ -158,5 +170,13 @@ public class HttpEventsHandlerTest {
         catch (Exception e) {
             Assert.fail(e.getMessage());
         }
+    }
+
+    private String convertDateTimeToTimestamp(DateTime date) {
+        return Long.toString(date.getMillis() / 1000);
+    }
+
+    private String nowTimestamp() {
+        return convertDateTimeToTimestamp(new DateTime().withSecondOfMinute(0).withMillisOfSecond(0));
     }
 }
