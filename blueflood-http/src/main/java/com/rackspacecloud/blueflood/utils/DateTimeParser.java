@@ -2,7 +2,6 @@ package com.rackspacecloud.blueflood.utils;
 
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -10,44 +9,51 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DateTimeParser {
-    public static DateTime parse(String s) {
-        String stringToParse = s.replace(" ", "").replace(",", "").replace("_", "");
-        if (StringUtils.isNumeric(stringToParse)) {
-            if (stringToParse.length() == 8 &&
-                    Integer.parseInt(stringToParse.substring(0, 4)) > 1900 &&
-                    Integer.parseInt(stringToParse.substring(4, 6)) < 13 &&
-                    Integer.parseInt(stringToParse.substring(6)) < 32) {
-                // do nothing
-            } else {
+    public static DateTime parse(String dateTimeString) {
+        String stringToParse = dateTimeString.replace(" ", "").replace(",", "").replace("_", "");
+        if (StringUtils.isNumeric(stringToParse) && !isLikelyDateTime(stringToParse)) {
                 return new DateTime(Long.parseLong(stringToParse) * 1000);
-            }
         }
-        try {
-            DateTimeFormatter formatter = DateTimeFormat.forPattern("HH:mmyyyyMMdd");
-            return formatter.parseDateTime(stringToParse);
-        }
-        catch (IllegalArgumentException e) {
-
-        }
+        DateTime dateTime = tryParseDateTime("HH:mmyyyyMMdd", stringToParse);
+        if (dateTime != null)
+            return dateTime;
 
         String offset;
         if (stringToParse.contains("+")) {
             String[] offsetSplit = stringToParse.split("\\+", 2);
             stringToParse = offsetSplit[0];
             offset = offsetSplit.length > 1 ? offsetSplit[1] : "";
-            DateTime dateTime = parseTime(stringToParse);
+            dateTime = parseTime(stringToParse);
             dateTime = parseOffset(dateTime, offset);
             return  dateTime;
         } else if (stringToParse.contains("-")) {
             String[] offsetSplit = stringToParse.split("-", 2);
             stringToParse = offsetSplit[0];
             offset = offsetSplit.length > 1 ? "-" + offsetSplit[1] : "";
-            DateTime dateTime = parseTime(stringToParse);
+            dateTime = parseTime(stringToParse);
             dateTime = parseOffset(dateTime, offset);
             return dateTime;
         } else {
             return parseTime(stringToParse);
         }
+    }
+
+    private static DateTime tryParseDateTime(String format, String dateTime) {
+        DateTime resultDateTime;
+        try {
+            resultDateTime = DateTimeFormat.forPattern(format).parseDateTime(dateTime);
+        }
+        catch (IllegalArgumentException e) {
+            resultDateTime = null;
+        }
+        return resultDateTime;
+    }
+
+    private static boolean isLikelyDateTime(String stringToParse) {
+        return stringToParse.length() == 8 &&
+                Integer.parseInt(stringToParse.substring(0, 4)) > 1900 &&
+                Integer.parseInt(stringToParse.substring(4, 6)) < 13 &&
+                Integer.parseInt(stringToParse.substring(6)) < 32;
     }
 
     private static DateTime parseOffset(DateTime baseDateTime, String offset) {
@@ -120,6 +126,12 @@ public class DateTimeParser {
             stringToParse = stringToParse.substring("midnight".length());
         }
 
+        resultDateTime = parseDate(stringToParse, resultDateTime);
+
+        return resultDateTime;
+    }
+
+    private static DateTime parseDate(String stringToParse, DateTime resultDateTime) {
         if (stringToParse.equals("today")) {
             // do nothing
         } else if (stringToParse.equals("tomorrow")) {
@@ -132,43 +144,24 @@ public class DateTimeParser {
 
         String[] datePatterns = {"MM/dd/YY", "MM/dd/YYYY", "YYYYMMdd", "MMMMddYYYY"};
         for (String s : datePatterns) {
-            try {
-                DateTime date = parseDate(stringToParse, s);
-                resultDateTime = resultDateTime.withDate(date.year().get(), date.monthOfYear().get(), date.dayOfMonth().get());
+            DateTime date = tryParseDateTime(s, stringToParse);
+            if (date != null) {
+                resultDateTime = resultDateTime.withDate(date.getYear(), date.getMonthOfYear(), date.getDayOfMonth());
                 break;
             }
-            catch (IllegalArgumentException e) {
-                continue;
-            }
         }
 
-        try {
-            String monthDayOptionalYearFormat = "MMMMdd";
-            DateTime date = parseDate(stringToParse, monthDayOptionalYearFormat);
+        String monthDayOptionalYearFormat = "MMMMdd";
+        DateTime date = tryParseDateTime(monthDayOptionalYearFormat, stringToParse);
+        if (date != null)
             resultDateTime = resultDateTime.withDate(resultDateTime.getYear(), date.getMonthOfYear(), date.getDayOfMonth());
-        }
-        catch (IllegalArgumentException e) {
 
-        }
 
-        try {
-            String dayOfWeekFormat = "EEE";
-            DateTime date = parseDate(stringToParse, dayOfWeekFormat);
+        String dayOfWeekFormat = "EEE";
+        date = tryParseDateTime(dayOfWeekFormat, stringToParse);
+        if (date != null)
             while (resultDateTime.getDayOfWeek() != date.getDayOfWeek())
                 resultDateTime = resultDateTime.minusDays(1);
-        }
-        catch (IllegalArgumentException e) {
-
-        }
-
-
-
-
-
         return resultDateTime;
-    }
-
-    private static DateTime parseDate(String stringToParse, String format) {
-        return DateTimeFormat.forPattern(format).parseDateTime(stringToParse);
     }
 }
