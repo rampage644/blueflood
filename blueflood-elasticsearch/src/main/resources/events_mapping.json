@@ -5,7 +5,8 @@
     },
     "properties": {
       "tenantid": {
-        "type": "string"
+        "type": "string",
+        "index": "not_analyzed"
       },
       "what": {
         "type": "string",
