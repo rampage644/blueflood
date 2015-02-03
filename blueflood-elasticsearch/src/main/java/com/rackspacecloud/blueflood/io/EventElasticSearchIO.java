@@ -5,8 +5,10 @@ import com.rackspacecloud.blueflood.service.RemoteElasticSearchServer;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.SearchHit;
+import org.omg.CORBA.LongLongSeqHolder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -92,11 +94,13 @@ public class EventElasticSearchIO implements GenericElasticSearchIO {
         String untilQuery = extractFieldFromQuery(untilQueryName, query);
         String fromQuery = extractFieldFromQuery(fromQueryName, query);
         if (!untilQuery.equals("") && !fromQuery.equals("")) {
-            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).to(untilQuery).from(fromQuery));
+            qb = qb.must(rangeQuery(ESFieldLabel.when.toString())
+                    .to(Long.parseLong(untilQuery))
+                    .from(Long.parseLong(fromQuery)));
         } else if (!untilQuery.equals("")) {
-            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).to(untilQuery));
+            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).to(Long.parseLong(untilQuery)));
         } else if (!fromQuery.equals("")) {
-            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).from(fromQuery));
+            qb = qb.must(rangeQuery(ESFieldLabel.when.toString()).from(Long.parseLong(fromQuery)));
         }
         return qb;
     }
