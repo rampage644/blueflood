@@ -82,8 +82,8 @@ public class HttpEventsHandler implements HttpRequestHandler {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             Event event = objectMapper.readValue(request.getContent().array(), Event.class);
-            if (event.getWhen().equals("")) {
-                event.setWhen(Long.toString(new DateTime().getMillis() / 1000));
+            if (event.getWhen() == 0) {
+                event.setWhen(new DateTime().getMillis() / 1000);
             }
 
             if (event.getWhat().equals("")) {
@@ -142,7 +142,7 @@ public class HttpEventsHandler implements HttpRequestHandler {
     }
 
     private static class Event {
-        private String when = "";
+        private long when = 0;
         private String what = "";
         private String data = "";
         private String tags = "";
@@ -157,11 +157,11 @@ public class HttpEventsHandler implements HttpRequestHandler {
             return map;
         }
 
-        public String getWhen() {
+        public long getWhen() {
             return when;
         }
 
-        public void setWhen(String when) {
+        public void setWhen(long when) {
             this.when = when;
         }
 
