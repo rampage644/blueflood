@@ -18,10 +18,13 @@ public class EventElasticSearchIOTest {
     private static final String TENANT_1 = "tenant1";
     private static final String TENANT_2 = "otheruser2";
     private static final String TENANT_RANGE = "rangetenant";
+    private static final String TENANT_WITH_SYMBOLS = "tenant-id_id#id";
     private static final int TENANT_1_EVENTS_NUM = 3;
     private static final int TENANT_2_EVENTS_NUM = 7;
+    private static final int TENANT_WITH_SYMBOLS_NUM = 2;
     private static final int TENANT_RANGE_EVENTS_NUM = 10;
     private static final int RANGE_STEP_IN_SECONDS = 15 * 60;
+
 
     @Test
     public void testNonCrossTenantSearch() throws Exception {
@@ -35,7 +38,11 @@ public class EventElasticSearchIOTest {
 
         results = searchIO.search(TENANT_RANGE, query);
         Assert.assertEquals(TENANT_RANGE_EVENTS_NUM, results.size());
+
+        results = searchIO.search(TENANT_WITH_SYMBOLS, query);
+        Assert.assertEquals(TENANT_WITH_SYMBOLS_NUM, results.size());
     }
+
 
     @Test
     public void testEventTagsOnlySearch() throws Exception {
@@ -95,6 +102,7 @@ public class EventElasticSearchIOTest {
 
         createTestEvents(TENANT_1, TENANT_1_EVENTS_NUM);
         createTestEvents(TENANT_2, TENANT_2_EVENTS_NUM);
+        createTestEvents(TENANT_WITH_SYMBOLS, TENANT_WITH_SYMBOLS_NUM);
         createRangeEvents(TENANT_RANGE, TENANT_RANGE_EVENTS_NUM, RANGE_STEP_IN_SECONDS);
 
         esSetup.client().admin().indices().prepareRefresh().execute().actionGet();
