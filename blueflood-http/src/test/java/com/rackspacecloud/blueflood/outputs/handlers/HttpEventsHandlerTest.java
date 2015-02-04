@@ -1,17 +1,13 @@
-package com.rackspacecloud.blueflood.inputs.handlers;
-
+package com.rackspacecloud.blueflood.outputs.handlers;
 
 import com.rackspacecloud.blueflood.http.HTTPRequestWithDecodedQueryParams;
 import com.rackspacecloud.blueflood.io.GenericElasticSearchIO;
-import com.rackspacecloud.blueflood.outputs.handlers.HttpEventsHandler;
 import junit.framework.Assert;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.handler.codec.http.*;
 import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -41,7 +37,7 @@ public class HttpEventsHandlerTest {
     private Map<String, Object> createRandomEvent() {
         Map<String, Object> event = new HashMap<String, Object>();
         event.put("what", "1");
-        event.put("when", "2");
+        event.put("when", (long)2);
         event.put("data", "3");
         event.put("tags", "4");
         return  event;
@@ -68,51 +64,35 @@ public class HttpEventsHandlerTest {
     }
 
     @Test
-    public void testElasticSearchInsertCalledWhenPut() {
-        try {
-            List<Map<String, Object>> events = new ArrayList<Map<String, Object>>();
-            Map<String, Object> event = createRandomEvent();
-            events.add(event);
-            handler.handle(context, createPutOneEventRequest(event));
-            verify(searchIO).insert(TENANT, events);
-        }
-        catch (Exception e) {
-            Assert.fail(e.getMessage());
-        }
+    public void testElasticSearchInsertCalledWhenPut() throws Exception {
+        List<Map<String, Object>> events = new ArrayList<Map<String, Object>>();
+        Map<String, Object> event = createRandomEvent();
+        events.add(event);
+        handler.handle(context, createPutOneEventRequest(event));
+        verify(searchIO).insert(TENANT, events);
     }
 
     @Test
-    public void testElasticSearchSearchCalledWhenGet() {
+    public void testElasticSearchSearchCalledWhenGet() throws Exception {
         testQuery("", new HashMap<String, List<String>>());
     }
 
-    private void testQuery(String query, Map<String, List<String>> params) {
+    private void testQuery(String query, Map<String, List<String>> params) throws Exception {
         handler.handle(context, createGetRequest(query));
-
-        try {
-            verify(searchIO).search(TENANT, params);
-        }
-        catch (Exception e) {
-            Assert.fail(e.getMessage());
-        }
+        verify(searchIO).search(TENANT, params);
     }
 
-    @Test public void testMalformedEventPut() {
+    @Test public void testMalformedEventPut() throws Exception {
         final String malformedJSON = "{\"when\":, what]}";
         handler.handle(context, createRequest(HttpMethod.POST, "", malformedJSON));
-        try {
-            ArgumentCaptor<DefaultHttpResponse> argument = ArgumentCaptor.forClass(DefaultHttpResponse.class);
 
-            verify(searchIO, never()).insert(anyString(), anyList());
-            verify(channel).write(argument.capture());
-            Assert.assertNotSame(argument.getValue().getContent().toString(Charset.defaultCharset()), "");
-        }
-        catch (Exception e) {
-            Assert.fail(e.getMessage());
-        }
+        ArgumentCaptor<DefaultHttpResponse> argument = ArgumentCaptor.forClass(DefaultHttpResponse.class);
+        verify(searchIO, never()).insert(anyString(), anyList());
+        verify(channel).write(argument.capture());
+        Assert.assertNotSame(argument.getValue().getContent().toString(Charset.defaultCharset()), "");
     }
 
-    @Test public void testQueryParametersParse() {
+    @Test public void testQueryParametersParse() throws Exception {
         Map<String, List<String>> params = new HashMap<String, List<String>>();
         params.put("until", Arrays.asList(nowTimestamp()));
         testQuery("?until=now", params);
@@ -120,7 +100,7 @@ public class HttpEventsHandlerTest {
         params.clear();
         params.put("until", Arrays.asList(nowTimestamp()));
         params.put("from", Arrays.asList("1422828000"));
-        testQuery("?until=now&from=1422828000000", params);
+        testQuery("?until=now&from=1422828000", params);
 
         params.clear();
         params.put("tags", Arrays.asList("event"));
@@ -128,55 +108,41 @@ public class HttpEventsHandlerTest {
     }
 
     @Test
-    public void testDateQueryParamProcessing() {
+    public void testDateQueryParamProcessing() throws Exception {
         Map<String, List<String>> params = new HashMap<String, List<String>>();
-
 
         params.clear();
         params.put("until", Arrays.asList(nowTimestamp()));
-        params.put("from", Arrays.asList(convertDateTimeToTimestamp(new DateTime(2014, 12, 30, 0, 0, 0, 0))));
+        params.put("from", Arrays.asList(Long.toString(convertDateTimeToTimestamp(new DateTime(2014, 12, 30, 0, 0, 0, 0)))));
         testQuery("?until=now&from=00:00_2014_12_30", params);
-
     }
 
-    @Test public void testMinimumEventPut() {
+    @Test public void testMinimumEventPut() throws Exception {
         Map<String, Object> event = new HashMap<String, Object>();
         event.put("data", "data");
 
-        try {
-            ArgumentCaptor<DefaultHttpResponse> argument = ArgumentCaptor.forClass(DefaultHttpResponse.class);
+        ArgumentCaptor<DefaultHttpResponse> argument = ArgumentCaptor.forClass(DefaultHttpResponse.class);
 
-            handler.handle(context, createPutOneEventRequest(event));
-            verify(searchIO, never()).insert(anyString(), anyList());
-            verify(channel).write(argument.capture());
-            Assert.assertEquals(argument.getValue().getContent().toString(Charset.defaultCharset()), "Error: Event should contain at least 'what' field.");
-        }
-        catch (Exception e) {
-            Assert.fail(e.getMessage());
-        }
+        handler.handle(context, createPutOneEventRequest(event));
+        verify(searchIO, never()).insert(anyString(), anyList());
+        verify(channel).write(argument.capture());
+        Assert.assertEquals(argument.getValue().getContent().toString(Charset.defaultCharset()), "Error: Event should contain at least 'what' field.");
     }
 
-    @Test public void testApplyingCurrentTimeWhenEmpty() {
-        try {
-            Map<String, Object> event = createRandomEvent();
-            event.remove("when");
-            handler.handle(context, createPutOneEventRequest(event));
+    @Test public void testApplyingCurrentTimeWhenEmpty() throws Exception {
+        Map<String, Object> event = createRandomEvent();
+        event.remove("when");
+        handler.handle(context, createPutOneEventRequest(event));
 
-
-
-            event.put("when", convertDateTimeToTimestamp(new DateTime()));
-            verify(searchIO).insert(TENANT, Arrays.asList(event));
-        }
-        catch (Exception e) {
-            Assert.fail(e.getMessage());
-        }
+        event.put("when", convertDateTimeToTimestamp(new DateTime()));
+        verify(searchIO).insert(TENANT, Arrays.asList(event));
     }
 
-    private String convertDateTimeToTimestamp(DateTime date) {
-        return Long.toString(date.getMillis() / 1000);
+    private long convertDateTimeToTimestamp(DateTime date) {
+        return date.getMillis() / 1000;
     }
 
     private String nowTimestamp() {
-        return convertDateTimeToTimestamp(new DateTime().withSecondOfMinute(0).withMillisOfSecond(0));
+        return Long.toString(convertDateTimeToTimestamp(new DateTime().withSecondOfMinute(0).withMillisOfSecond(0)));
     }
 }
