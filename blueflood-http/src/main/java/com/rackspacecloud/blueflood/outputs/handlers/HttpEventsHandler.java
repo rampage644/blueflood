@@ -102,7 +102,7 @@ public class HttpEventsHandler implements HttpRequestHandler {
     private void handleGetEvent(ChannelHandlerContext ctx, HttpRequest request, String tenantId) {
 
         ObjectMapper objectMapper = new ObjectMapper();
-        String responseBody = null;
+        String responseBody;
         try {
             HTTPRequestWithDecodedQueryParams requestWithParams = (HTTPRequestWithDecodedQueryParams) request;
             Map<String, List<String>> params = requestWithParams.getQueryParams();
@@ -115,6 +115,7 @@ public class HttpEventsHandler implements HttpRequestHandler {
         }
         catch (Exception e) {
             log.error(String.format("Exception %s", e.toString()));
+            responseBody = String.format("Error: %s", e.getMessage());
         }
 
         sendResponse(ctx, request, responseBody, HttpResponseStatus.OK);
