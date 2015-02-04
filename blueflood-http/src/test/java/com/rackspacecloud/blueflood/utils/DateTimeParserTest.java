@@ -7,6 +7,8 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 public class DateTimeParserTest {
     @Test
     public void testFromUnixTimestamp() {
@@ -99,10 +101,12 @@ public class DateTimeParserTest {
     @Test
     public void testDayOfWeekFormat() {
         DateTime todayDate = referenceDateTime();
-        DateTime date = DateTimeParser.parse("Sun");
-        Assert.assertEquals(date.getDayOfWeek(), 7);
-        Assert.assertTrue(todayDate.getYear() == date.getYear());
-        Assert.assertTrue(todayDate.getDayOfYear() - date.getDayOfYear() <= 7);
+        for (String dateTimeString: Arrays.asList("Sun", "14:42 Sun", "noon Sun")) {
+            DateTime date = DateTimeParser.parse(dateTimeString);
+            Assert.assertEquals(date.getDayOfWeek(), 7);
+            Assert.assertTrue(todayDate.getYear() == date.getYear());
+            Assert.assertTrue(todayDate.getDayOfYear() - date.getDayOfYear() <= 7);
+        }
     }
 
     @Test
@@ -136,7 +140,17 @@ public class DateTimeParserTest {
     @Test
     public void testComplexFormats() {
         testFormat("12:24 yesterday", nowDateTime().minusDays(1).withHourOfDay(12).withMinuteOfHour(24));
+        testFormat("12:24 tomorrow", nowDateTime().plusDays(1).withHourOfDay(12).withMinuteOfHour(24));
+        testFormat("12:24 today", nowDateTime().withHourOfDay(12).withMinuteOfHour(24));
         testFormat("noon 12/30/2014", nowDateTime().withDate(2014, 12, 30).withHourOfDay(12).withMinuteOfHour(0));
+
+        int currentYear = referenceDateTime().getYear();
+        testFormat("15:45 12/30/14", new DateTime(2014, 12, 30, 15, 45, 0, 0));
+        testFormat("teatime 12/30/2014", new DateTime(2014, 12, 30, 16, 0, 0, 0));
+        testFormat("midnight Jul 30", new DateTime(currentYear, 07, 30, 0, 0, 0, 0));
+        testFormat("Jul 30, 2013", new DateTime(2013, 07, 30, 0, 0, 0, 0));
+        testFormat("Jul 30", new DateTime(currentYear, 07, 30, 0, 0, 0, 0));
+        testFormat("20141230", new DateTime(2014, 12, 30, 0, 0, 0, 0));
     }
 
     private void testFormat(String dateString, DateTime date) {
