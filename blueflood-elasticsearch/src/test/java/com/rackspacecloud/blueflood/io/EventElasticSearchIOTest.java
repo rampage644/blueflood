@@ -1,14 +1,12 @@
-package com.rackspacecloud.blueflood.service;
+package com.rackspacecloud.blueflood.io;
 
 import com.github.tlrx.elasticsearch.test.EsSetup;
-import com.rackspacecloud.blueflood.io.EventElasticSearchIO;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.*;
 
 public class EventElasticSearchIOTest {
@@ -42,6 +40,18 @@ public class EventElasticSearchIOTest {
         results = searchIO.search(TENANT_WITH_SYMBOLS, query);
         Assert.assertEquals(TENANT_WITH_SYMBOLS_NUM, results.size());
     }
+
+    @Test
+    public void testEmptyQueryParameters() throws Exception {
+        Map<String, List<String>> query = new HashMap<String, List<String>>();
+        query.put("tags", new ArrayList<String>());
+        query.put("from", new ArrayList<String>());
+        query.put("until", new ArrayList<String>());
+
+        List<Map<String, Object>> results = searchIO.search(TENANT_1, query);
+        Assert.assertEquals(TENANT_1_EVENTS_NUM, results.size());
+    }
+
 
 
     @Test
@@ -84,7 +94,7 @@ public class EventElasticSearchIOTest {
 
         query.clear();
         fromDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * 2 - secondsDelta);
-        untilDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS * 1 - secondsDelta);
+        untilDateTime = new DateTime().minusSeconds(RANGE_STEP_IN_SECONDS - secondsDelta);
         query.put("from", Arrays.asList(Long.toString(fromDateTime.getMillis() / 1000)));
         query.put("until", Arrays.asList(Long.toString(untilDateTime.getMillis() / 1000)));
         results = searchIO.search(TENANT_RANGE, query);
@@ -92,7 +102,7 @@ public class EventElasticSearchIOTest {
     }
 
     @Before
-    public void setup() throws IOException {
+    public void setup() throws Exception {
         esSetup = new EsSetup();
         esSetup.execute(EsSetup.deleteAll());
         esSetup.execute(EsSetup
@@ -108,7 +118,7 @@ public class EventElasticSearchIOTest {
         esSetup.client().admin().indices().prepareRefresh().execute().actionGet();
     }
 
-    private void createTestEvents(String tenant, int eventCount) {
+    private void createTestEvents(String tenant, int eventCount) throws Exception {
         ArrayList<Map<String, Object>> eventList = new ArrayList<Map<String, Object>>();
         DateTime date = new DateTime();
         for (int i=0; i<eventCount; i++) {
@@ -119,13 +129,11 @@ public class EventElasticSearchIOTest {
             event.put("tags", String.format("[%s] %s %d", tenant, "Event tags sample", i));
             eventList.add(event);
         }
-        try {
-            searchIO.insert(tenant, eventList);
-        }
-        catch (Exception e) {}
+
+        searchIO.insert(tenant, eventList);
     }
 
-    private void createRangeEvents(String tenant, int eventCount, int stepInSeconds) {
+    private void createRangeEvents(String tenant, int eventCount, int stepInSeconds) throws Exception {
         ArrayList<Map<String, Object>> eventList = new ArrayList<Map<String, Object>>();
         DateTime date = new DateTime();
         for (int i=0;i<eventCount; i++) {
@@ -138,10 +146,7 @@ public class EventElasticSearchIOTest {
 
             date = date.minusSeconds(stepInSeconds);
         }
-        try {
-            searchIO.insert(tenant, eventList);
-        }
-        catch (Exception e) {}
+        searchIO.insert(tenant, eventList);
     }
 
     @After
