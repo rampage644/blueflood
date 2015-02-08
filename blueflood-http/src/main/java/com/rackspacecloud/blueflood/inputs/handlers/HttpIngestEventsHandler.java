@@ -5,8 +5,6 @@ import com.rackspacecloud.blueflood.http.HttpResponder;
 import com.rackspacecloud.blueflood.io.GenericElasticSearchIO;
 import com.rackspacecloud.blueflood.io.Constants;
 
-import com.rackspacecloud.blueflood.service.Configuration;
-import com.rackspacecloud.blueflood.service.CoreConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -22,39 +20,8 @@ public class HttpIngestEventsHandler implements HttpRequestHandler {
     private static final Logger log = LoggerFactory.getLogger(HttpIngestEventsHandler.class);
     private GenericElasticSearchIO searchIO;
 
-    public HttpIngestEventsHandler() {
-        loadEventModule();
-    }
     public HttpIngestEventsHandler(GenericElasticSearchIO searchIO) {
         this.searchIO = searchIO;
-    }
-
-    private void loadEventModule() {
-        List<String> modules = Configuration.getInstance().getListProperty(CoreConfig.EVENTS_MODULES);
-
-        if (!modules.isEmpty() && modules.size() != 1) {
-            throw new RuntimeException("Cannot load query service with more than one event module");
-        }
-
-        ClassLoader classLoader = GenericElasticSearchIO.class.getClassLoader();
-        for (String module : modules) {
-            log.info("Loading metric event module " + module);
-            try {
-                Class discoveryClass = classLoader.loadClass(module);
-                this.searchIO = (GenericElasticSearchIO) discoveryClass.newInstance();
-                log.info("Registering metric event module " + module);
-            } catch (InstantiationException e) {
-                log.error("Unable to create instance of metric event class for: " + module, e);
-            } catch (IllegalAccessException e) {
-                log.error("Error starting metric event module: " + module, e);
-            } catch (ClassNotFoundException e) {
-                log.error("Unable to locate metric event module: " + module, e);
-            } catch (RuntimeException e) {
-                log.error("Error starting metric event module: " + module, e);
-            } catch (Throwable e) {
-                log.error("Error starting metric event module: " + module, e);
-            }
-        }
     }
 
     @Override
