@@ -1,6 +1,5 @@
-package com.rackspacecloud.blueflood.outputs.handlers;
+package com.rackspacecloud.blueflood.inputs.handlers;
 
-import com.rackspacecloud.blueflood.http.HTTPRequestWithDecodedQueryParams;
 import com.rackspacecloud.blueflood.http.HttpRequestHandler;
 import com.rackspacecloud.blueflood.http.HttpResponder;
 import com.rackspacecloud.blueflood.io.GenericElasticSearchIO;
@@ -8,7 +7,6 @@ import com.rackspacecloud.blueflood.io.Constants;
 
 import com.rackspacecloud.blueflood.service.Configuration;
 import com.rackspacecloud.blueflood.service.CoreConfig;
-import com.rackspacecloud.blueflood.utils.DateTimeParser;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -20,14 +18,14 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 
-public class HttpEventsHandler implements HttpRequestHandler {
-    private static final Logger log = LoggerFactory.getLogger(HttpEventsHandler.class);
+public class HttpIngestEventsHandler implements HttpRequestHandler {
+    private static final Logger log = LoggerFactory.getLogger(HttpIngestEventsHandler.class);
     private GenericElasticSearchIO searchIO;
 
-    public HttpEventsHandler() {
+    public HttpIngestEventsHandler() {
         loadEventModule();
     }
-    public HttpEventsHandler(GenericElasticSearchIO searchIO) {
+    public HttpIngestEventsHandler(GenericElasticSearchIO searchIO) {
         this.searchIO = searchIO;
     }
 
@@ -63,16 +61,6 @@ public class HttpEventsHandler implements HttpRequestHandler {
     public void handle(ChannelHandlerContext ctx, HttpRequest request) {
         final String tenantId = request.getHeader("tenantId");
 
-        if (request.getMethod() == HttpMethod.GET) {
-            handleGetEvent(ctx, request, tenantId);
-        } else if (request.getMethod() == HttpMethod.POST) {
-            handlePutEvent(ctx, request, tenantId);
-        }
-
-
-    }
-
-    private void handlePutEvent(ChannelHandlerContext ctx, HttpRequest request, String tenantId) {
         String response = "";
         ObjectMapper objectMapper = new ObjectMapper();
         try {
@@ -94,28 +82,6 @@ public class HttpEventsHandler implements HttpRequestHandler {
         sendResponse(ctx, request, response, HttpResponseStatus.OK);
     }
 
-    private void handleGetEvent(ChannelHandlerContext ctx, HttpRequest request, String tenantId) {
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        String responseBody;
-        try {
-            HTTPRequestWithDecodedQueryParams requestWithParams = (HTTPRequestWithDecodedQueryParams) request;
-            Map<String, List<String>> params = requestWithParams.getQueryParams();
-
-            parseDateFieldInQuery(params, "from");
-            parseDateFieldInQuery(params, "until");
-
-            List<Map<String, Object>> searchResult = searchIO.search(tenantId, params);
-            responseBody = objectMapper.writeValueAsString(searchResult);
-        }
-        catch (Exception e) {
-            log.error(String.format("Exception %s", e.toString()));
-            responseBody = String.format("Error: %s", e.getMessage());
-        }
-
-        sendResponse(ctx, request, responseBody, HttpResponseStatus.OK);
-    }
-
     private void sendResponse(ChannelHandlerContext channel, HttpRequest request, String messageBody,
                               HttpResponseStatus status) {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
@@ -123,18 +89,6 @@ public class HttpEventsHandler implements HttpRequestHandler {
             response.setContent(ChannelBuffers.copiedBuffer(messageBody, Constants.DEFAULT_CHARSET));
         }
         HttpResponder.respond(channel, request, response);
-    }
-
-    private void parseDateFieldInQuery(Map<String, List<String>> params, String name) {
-        if (params.containsKey(name)) {
-            String fromValue = extractDateFieldFromQuery(params.get(name));
-            params.put(name, Arrays.asList(fromValue));
-        }
-    }
-
-    private String extractDateFieldFromQuery(List<String> value) {
-        DateTime dateTime = DateTimeParser.parse(value.get(0));
-        return Long.toString(dateTime.getMillis() / 1000);
     }
 
     private static class Event {
