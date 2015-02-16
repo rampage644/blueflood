@@ -85,6 +85,7 @@ public class HttpMetricsIngestionServer {
         router.get("/v2.0", new DefaultHandler());
         router.post("/v2.0/:tenantId/ingest/multi", new HttpMultitenantMetricsIngestionHandler(processor, timeout));
         router.post("/v2.0/:tenantId/ingest", new HttpMetricsIngestionHandler(processor, timeout));
+        router.post("/v2.0/:tenantId/ingest/graphite", new HttpGraphiteMetricsIngestionHandler(processor, timeout));
         router.post("/v2.0/:tenantId/ingest/aggregated", new HttpStatsDIngestionHandler(processor, timeout));
 
         log.info("Starting metrics listener HTTP server on port {}", httpIngestPort);
